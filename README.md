@@ -40,10 +40,13 @@ My hardware:
 * ds1307 attached to wemos i2c connector
 * RX pin to Din of 60 LED ring, Dout to Din of 48 LED ring.
 * usb-c powered from a 12W USB charger
+This is mounted in a picture frame (IKEA sannahed 25x25cm).
+LED rings are sandwiched between 4mm 25x25cm mounting board and 4mm 25x25cm Acrylcolor Gray (Gutta).
+The mounting board has holes for LED ring connections, all other electronics are mounted to the back of that board.
 
 ## Credits
 
-Largely inspired by [/markusressel/ESPHome-Analog-Clock](/markusressel/ESPHome-Analog-Clock), thanks markusressel!
+Largely inspired by [/markusressel/ESPHome-Analog-Clock](https://github.com/markusressel/ESPHome-Analog-Clock), thanks markusressel!
 
 # Contributing
 

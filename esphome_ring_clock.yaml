@@ -1,6 +1,6 @@
 substitutions:
   devicename: ringclock
-  num_leds: "60"
+  num_leds: "108"
 
 esphome:
   name: $devicename

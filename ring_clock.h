@@ -5,14 +5,14 @@ void update_clock_hands(AddressableLight &it, ESPTime time,
 //FIXME: allow specifying ring size ring[], eg: {60,48}
 
 /*
-esphome globals used
-id(clock_brightness) bool
-id(clock_fade_enabled) bool
-id(clock_mode) integer
- 0: classic analog clock
- 1: paint dim arcs of 5 min
- 2: paint dim arcs from top
-id(clock_seconds_enabled) bool
+esphome globals used:
+   id(clock_brightness) bool
+   id(clock_fade_enabled) bool
+   id(clock_mode) integer
+    0: classic analog clock
+    1: paint dim arcs of 5 min
+    2: paint dim arcs from top
+   id(clock_seconds_enabled) bool
 
 */
 
@@ -73,11 +73,11 @@ id(clock_seconds_enabled) bool
     }
     if (r2_size > 0 ) { 
       for (int i = r1_size; i < hour_idx; i++) {
-	clock_ring_colors[i] = hour_arc_color;
+        clock_ring_colors[i] = hour_arc_color;
       }
     } else {
       for (int i = 0; i < hour_idx; i++) {
-	clock_ring_colors[i] = hour_arc_color;
+        clock_ring_colors[i] = hour_arc_color;
       }
       if (minute_idx < hour_idx ) { //minutes overwritten, repaint them :(
         for (int i = 0; i < minute_idx; i++) {
@@ -94,7 +94,7 @@ id(clock_seconds_enabled) bool
     if (from == to) { from--; to++; }
     if (id(clock_seconds_enabled)) {
       for (int i = from; i <= to; i++) {
-        clock_ring_colors[i%60] = second_arc_color;
+        clock_ring_colors[(i+r1_size)%r1_size] = second_arc_color;
       }
     }
     from= tick*(int)(minute_idx/tick);
@@ -117,22 +117,21 @@ id(clock_seconds_enabled) bool
       to  = tick*(int)((hour_idx+tick-1)/tick);
       if (from == to) { from--; to++; }
       for (int i = from; i <= to; i++) {
-	clock_ring_colors[(i+r1_size)%r1_size] = hour_arc_color;
+        clock_ring_colors[(i+r1_size)%r1_size] = hour_arc_color;
       }
     }
   }
   
   // ticks and hands
   if (id(clock_mode)==0) { // classic has ticks
-    if (r2_size > 0 ) { 
-      for (int i = 0; i < 60; i+=5) {
-	clock_ring_colors[i] = tick_color;
-      }
-    } else {
-      for (int i = 0; i < num_leds; i+=(int)(num_leds/12)) {
-	clock_ring_colors[i] = tick_color;
-      }
+    for (int i = 0; i < r1_size; i+=(int)(r1_size/12)) {
+      clock_ring_colors[i] = tick_color;
     }
+    /*// 3h ticks on inner ring helps alignment
+    for (int i = r1_size; i < num_leds; i+=(int)(r2_size/4)) {
+      clock_ring_colors[i] = tick_color;
+    }
+    */
   }
   clock_ring_colors[hour_idx] = hour_color;
   if (id(clock_mode)==0) { // classic has wide hour hand
@@ -155,18 +154,13 @@ id(clock_seconds_enabled) bool
 
   // apply clock_ring_colors to light
   int x=0;
+  for (int i = 0; i < r1_size; i++) {
+    x = (i + r1_size + offset[0]) % r1_size;
+    it[x] = clock_ring_colors[i];
+  }
   if (r2_size > 0 ) {
-    for (int i = 0; i < 60; i++) {
-      x = (i + 60 + offset[0]) % 60;
-      it[x] = clock_ring_colors[i];
-    }
-    for (int i = 60; i < num_leds; i++) {
-      x = (i - 60 + offset[1]) % r2_size + 60;
-      it[x] = clock_ring_colors[i];
-    }
-  } else {
-    for (int i = 0; i < num_leds; i++) {
-      x = (i + num_leds + offset[0]) % num_leds;
+    for (int i = r1_size; i < num_leds; i++) {
+      x = (i - r1_size + offset[1]) % r2_size + r1_size;
       it[x] = clock_ring_colors[i];
     }
   }
