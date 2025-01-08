@@ -1,0 +1,328 @@
+substitutions:
+  devicename: ringclock
+  num_leds: "60"
+
+esphome:
+  name: $devicename
+  includes:
+    - "ring_clock.h"
+  on_boot:
+    #priority: 600
+    then:
+      - ds1307.read_time:
+      # enable clock effect after boot
+      - light.turn_on:
+          id: light_ring
+          brightness: 100%
+          effect: Clock
+
+esp8266:
+  board: d1_mini
+  restore_from_flash: true
+
+# Enable logging
+logger:
+  #level: INFO
+
+# Enable Home Assistant API
+#api:
+#  password: !secret clock_ota_password
+
+ota:
+  - platform: esphome
+    password: !secret clock_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Ringclock Fallback Hotspot"
+    password: !secret clock_ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+  version: 3    
+  sorting_groups:
+    - id: sorting_group_clock_settings
+      name: "Clock Settings"
+      sorting_weight: 10
+    - id: sorting_group_color_settings
+      name: "Color and Effects"
+      sorting_weight: 20
+    - id: sorting_group_custom_settings
+      name: "Colors (palet: Custom) (not persistent)"
+      sorting_weight: 30
+
+i2c:
+
+globals:
+  - id: clock_brightness
+    type: int
+    restore_value: yes
+    initial_value: '255'
+
+  - id: clock_mode
+    type: int
+    restore_value: yes
+    initial_value: '1'
+
+  - id: clock_palette
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+  - id: clock_seconds_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
+  - id: clock_fade_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
+  - id: hour_red
+    type: int
+  - id: hour_green
+    type: int
+  - id: hour_blue
+    type: int
+  - id: minute_red
+    type: int
+  - id: minute_green
+    type: int
+  - id: minute_blue
+    type: int
+  - id: second_red
+    type: int
+  - id: second_green
+    type: int
+  - id: second_blue
+    type: int
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Berlin
+    on_time_sync:
+      then:
+        ds1307.write_time:
+  - platform: ds1307
+    update_interval: never
+
+switch:
+  - platform: template
+    name: "Clock Seconds (not persistent)"
+    icon: mdi:update
+    web_server:
+      sorting_group_id: sorting_group_clock_settings
+    restore_mode: ALWAYS_ON
+    lambda: !lambda |-
+      return id(clock_seconds_enabled);
+    turn_on_action:
+      globals.set:
+        id: clock_seconds_enabled
+        value: 'true'
+    turn_off_action:
+      globals.set:
+        id: clock_seconds_enabled
+        value: 'false'
+
+  - platform: template
+    name: "Clock fade out (not persistent)"
+    restore_mode: ALWAYS_OFF
+    icon: mdi:clock-fast
+    web_server:
+      sorting_group_id: sorting_group_clock_settings
+    lambda: !lambda |-
+      return id(clock_fade_enabled);
+    turn_on_action:
+      globals.set:
+        id: clock_fade_enabled
+        value: 'true'
+    turn_off_action:
+      globals.set:
+        id: clock_fade_enabled
+        value: 'false'
+
+select:
+  - platform: template
+    name: "Clock Type"
+    icon: mdi:wrench-clock
+    web_server:
+      sorting_group_id: sorting_group_clock_settings
+    restore_value: 'true'
+    id: mode
+    options:
+     - "Classic Analog Clock"
+     - "5 Min Arc at Hand"
+     - "Arc from Top to Hand"
+    optimistic: true
+    on_value:
+      then:
+        lambda: !lambda "id(clock_mode)=i;"
+
+  - platform: template
+    name: "Clock Palet HMS"
+    icon: mdi:palette
+    web_server:
+      sorting_group_id: sorting_group_color_settings
+    restore_value: 'true'
+    id: palette
+    options:
+     - "Blue-Green-Red"
+     - "Magenta-Gold-Orange"
+     - "Custom non persistent"
+    optimistic: true
+    on_value:
+      then:
+        lambda: !lambda "id(clock_palette)=i;"
+output:
+  - platform: template
+    id: output_hour_red
+    type: float
+    write_action:
+      lambda: "id(hour_red)=(int)(255*state);"
+  - platform: template
+    id: output_hour_green
+    type: float
+    write_action:
+      lambda: "id(hour_green)=(int)(255*state);"
+  - platform: template
+    id: output_hour_blue
+    type: float
+    write_action:
+      lambda: "id(hour_blue)=(int)(255*state);"
+  - platform: template
+    id: output_minute_red
+    type: float
+    write_action:
+      lambda: "id(minute_red)=(int)(255*state);"
+  - platform: template
+    id: output_minute_green
+    type: float
+    write_action:
+      lambda: "id(minute_green)=(int)(255*state);"
+  - platform: template
+    id: output_minute_blue
+    type: float
+    write_action:
+      lambda: "id(minute_blue)=(int)(255*state);"
+  - platform: template
+    id: output_second_red
+    type: float
+    write_action:
+      lambda: "id(second_red)=(int)(255*state);"
+  - platform: template
+    id: output_second_green
+    type: float
+    write_action:
+      lambda: "id(second_green)=(int)(255*state);"
+  - platform: template
+    id: output_second_blue
+    type: float
+    write_action:
+      lambda: "id(second_blue)=(int)(255*state);"
+
+light:
+  - platform: rgb
+    name: "Hour Hand"
+    red: output_hour_red
+    green: output_hour_green
+    blue: output_hour_blue
+    web_server:
+      sorting_group_id: sorting_group_custom_settings
+    restore_mode: ALWAYS_ON
+    effects:
+      - random:
+      - random:
+         name: "Slow Random"
+         transition_length: 30s
+         update_interval: 30s
+  - platform: rgb
+    name: "Minute Hand"
+    red: output_minute_red
+    green: output_minute_green
+    blue: output_minute_blue
+    web_server:
+      sorting_group_id: sorting_group_custom_settings
+    restore_mode: ALWAYS_ON
+    effects:
+      - random:
+      - random:
+         name: "Slow Random"
+         transition_length: 30s
+         update_interval: 30s
+  - platform: rgb
+    name: "Second Hand"
+    red: output_second_red
+    green: output_second_green
+    blue: output_second_blue
+    web_server:
+      sorting_group_id: sorting_group_custom_settings
+    restore_mode: ALWAYS_ON
+    effects:
+      - random:
+      - random:
+         name: "Slow Random"
+         transition_length: 30s
+         update_interval: 30s
+  - id: light_ring
+    internal: False
+    platform: neopixelbus
+    #type: GRB
+    type: GRB
+    variant: SK6812
+    #variant: WS2812X
+    pin: RX #GPIO23
+    num_leds: "${num_leds}"
+    method: ESP8266_DMA
+    name: "Tick Color & Effect (not persistent)"
+    icon: mdi:circle-outline
+    web_server:
+      sorting_group_id: sorting_group_color_settings
+    color_correct: [50%, 50%, 50%]
+    on_turn_on:
+      then:
+        - light.control:
+            id: light_ring
+            effect: Clock
+    effects:
+      - addressable_lambda:
+          name: "Clock"
+          update_interval: 32ms
+          lambda: |-
+            auto time = id(sntp_time).now();
+            int offset[] = {0,0};
+            // colors for each palette option: hour minute second tick
+            Color colors[3][4]= {
+              {Color(0x0000ff),Color(0x00ff00),Color(0xff0000),current_color},
+              {Color(0xe11584),Color(0xffd700),Color(0xdc582a),current_color},
+              {Color(id(hour_red),id(hour_green),id(hour_blue)),
+               Color(id(minute_red),id(minute_green),id(minute_blue)),
+               Color(id(second_red),id(second_green),id(second_blue)),current_color} };
+            static Color clock_ring_colors [${num_leds}];
+            update_clock_hands(it, time, clock_ring_colors, offset, colors[id(clock_palette)]);
+      - addressable_scan:
+          name: Sync
+          move_interval: 100ms
+          scan_width: 1
+      - addressable_rainbow:
+          name: Rainbow Effect With Custom Values
+          speed: 10
+          width: 50
+      - addressable_random_twinkle:
+          name: Random Twinkle Effect With Custom Values
+          twinkle_probability: 15%
+          progress_interval: 32ms
+      - addressable_fireworks:
+          name: Fireworks Effect With Custom Values
+          update_interval: 32ms
+          spark_probability: 20%
+          use_random_color: false
+          fade_out_rate: 120
+
